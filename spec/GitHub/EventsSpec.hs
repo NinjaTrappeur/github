@@ -1,7 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
 module GitHub.EventsSpec where
 
-import Data.Either        (isRight)
+import Data.Aeson.Compat  (eitherDecodeStrict)
+import Data.Either.Compat (isRight)
+import Data.FileEmbed     (embedFile)
 import Data.String        (fromString)
 import Prelude ()
 import Prelude.Compat
@@ -27,9 +30,12 @@ spec :: Spec
 spec = do
   describe "repositoryEventsR" $ do
     it "returns non empty list of events" $ shouldSucceed $
-      GitHub.repositoryEventsR "phadej" "github" 1
+      GitHub.repositoryEventsR "phadej" "github" 4
   describe "userEventsR" $ do
-    it "returns non empty list of events" $ shouldSucceed $ GitHub.userEventsR "phadej" 1 
+    it "parses events result" $ do
+      let cs = (eitherDecodeStrict $(embedFile "fixtures/public-user-events.json"))::Either String [GitHub.Event]
+      length (fromRightS cs) `shouldSatisfy` (== 30)
+    it "returns non empty list of events" $ shouldSucceed $ GitHub.userEventsR "phadej" 4 
   where shouldSucceed f = withAuth $ \auth -> do
           cs <- GitHub.executeRequest auth $ f
           cs `shouldSatisfy` isRight
